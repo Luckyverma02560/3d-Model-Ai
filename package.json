@@ -1,6 +1,0 @@
-{
-  "name": "ar-product-viewer",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": { "start": "npx vite --host --https" }
-}
