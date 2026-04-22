@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+<title>AR 3D Product Viewer — Test</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { overflow:hidden; font-family:system-ui; background:#000; color:#fff; }
+
+#overlay { position:fixed; inset:0; pointer-events:none; z-index:10; }
+#hud {
+  position:absolute; top:12px; left:12px;
+  background:rgba(0,0,0,.55); padding:10px 14px; border-radius:12px;
+  font-size:13px; line-height:1.5; backdrop-filter:blur(8px);
+}
+#enter-ar {
+  position:absolute; bottom:32px; left:50%; transform:translateX(-50%);
+  padding:14px 28px; background:#0af; color:#fff; border:none;
+  border-radius:30px; font-weight:600; pointer-events:auto; cursor:pointer;
+  font-size: 16px;
+}
+#enter-ar:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+#console {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  width: 300px;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid #0f0;
+  border-radius: 8px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 8px;
+  color: #0f0;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.log-entry { margin: 2px 0; }
+.error { color: #f00; }
+.success { color: #0f0; }
+.info { color: #0af; }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="hud">
+    <div id="gesture">Gesture: —</div>
+    <div id="mode">Mode: Loading...</div>
+    <div id="gravity">Gravity: ON</div>
+  </div>
+  <button id="enter-ar">Enter AR</button>
+</div>
+
+<div id="console"></div>
+
+<!-- Import map for Three.js ecosystem -->
+<script type="importmap">
+{
+  "imports": {
+    "three":            "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/":    "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "cannon-es":        "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js",
+    "three-to-cannon":  "https://unpkg.com/three-to-cannon@4.3.0/dist/three-to-cannon.modern.js"
+  }
+}
+</script>
+
+<script type="module">
+  // Capture all console logs
+  const consoleDiv = document.getElementById('console');
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+
+  function addLog(msg, type = 'info') {
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.textContent = msg;
+    consoleDiv.appendChild(entry);
+    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    
+    if (type === 'error') originalError(msg);
+    else if (type === 'warn') originalWarn(msg);
+    else originalLog(msg);
+  }
+
+  console.log = (...args) => addLog(args.join(' '), 'info');
+  console.error = (...args) => addLog(args.join(' '), 'error');
+  console.warn = (...args) => addLog(args.join(' '), 'info');
+
+  addLog('Console initialized', 'success');
+  addLog('Loading main-simple.js...', 'info');
+</script>
+
+<script type="module" src="js/main-simple.js"></script>
+</body>
+</html>

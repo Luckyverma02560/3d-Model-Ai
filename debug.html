@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - AR VR</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: monospace; 
+      background: #222; 
+      color: #0f0; 
+      padding: 20px; 
+      overflow-y: auto;
+      height: 100vh;
+    }
+    h1 { margin: 20px 0 10px; }
+    .log { 
+      background: #111; 
+      padding: 10px; 
+      margin: 5px 0; 
+      border-left: 3px solid #0f0; 
+      word-wrap: break-word;
+    }
+    .error { border-left-color: #f00; color: #f55; }
+    #canvas { 
+      position: fixed; 
+      bottom: 20px; 
+      right: 20px; 
+      border: 2px solid #0f0; 
+      width: 400px; 
+      height: 300px;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>AR VR Debug Console</h1>
+  <div id="logs"></div>
+  <canvas id="canvas"></canvas>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+    const logsDiv = document.getElementById('logs');
+
+    function log(msg, isError = false) {
+      const div = document.createElement('div');
+      div.className = 'log' + (isError ? ' error' : '');
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logsDiv.appendChild(div);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+      console.log(msg);
+    }
+
+    log('Debug console started');
+    log(`Window size: ${window.innerWidth}x${window.innerHeight}`);
+    log(`Navigator XR: ${navigator.xr ? 'Available' : 'Not available'}`);
+
+    try {
+      log('Creating Three.js scene...');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(70, 400/300, 0.01, 40);
+      camera.position.z = 1;
+      
+      const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvas') });
+      renderer.setSize(400, 300);
+      renderer.setClearColor(0x000000, 1);
+      log('✓ Three.js scene created');
+
+      log('Adding lights...');
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+      const dir = new THREE.DirectionalLight(0xffffff, 1);
+      dir.position.set(1, 2, 1);
+      scene.add(dir);
+      log('✓ Lights added');
+
+      log('Loading model...');
+      const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+      const loader = new GLTFLoader().setDRACOLoader(draco);
+      
+      loader.load(
+        'models/adam_smasher_cyberpunk.glb',
+        (gltf) => {
+          log('✓ Model loaded successfully');
+          const model = gltf.scene;
+          
+          // Normalize
+          const box = new THREE.Box3().setFromObject(model);
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          model.position.sub(center);
+          const scale = 0.3 / size.length();
+          model.scale.setScalar(scale);
+          
+          scene.add(model);
+          log(`Model scale: ${scale.toFixed(4)}`);
+          log(`Model size: ${size.length().toFixed(3)}`);
+          
+          // Auto camera
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const fov = camera.fov * (Math.PI / 180);
+          const cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
+          camera.position.z = cameraZ;
+          log(`Camera positioned at Z: ${cameraZ.toFixed(2)}`);
+          
+          // Animate
+          let frameCount = 0;
+          const animate = () => {
+            frameCount++;
+            model.rotation.y += 0.005;
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+            
+            if (frameCount === 1) log('✓ Animation loop started');
+          };
+          animate();
+        },
+        (progress) => {
+          log(`Loading... ${(progress.loaded / progress.total * 100).toFixed(1)}%`);
+        },
+        (error) => {
+          log(`Model load error: ${error.message}`, true);
+        }
+      );
+    } catch (err) {
+      log(`Error: ${err.message}`, true);
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
